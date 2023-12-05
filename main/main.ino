@@ -24,11 +24,13 @@ int motorPinL = D5;
 int motorPinD = D6;
 int step;
 int frontDistance;
+int delayCount;
 
 bool autoMode;
 bool debug;
 bool lIrSensor;
 bool dIrSensor;
+bool doOnce;
 
 WidgetTerminal OutputTerminal(V3);
 
@@ -42,6 +44,7 @@ void loop() {
   CalculateMotorPower();
   HandleSteps();
   HandleForks(forksHeight);
+  delayCount++;
 }
 
 void HandleSteps(){
@@ -65,7 +68,15 @@ void HandleSteps(){
    
       break;
     case 5: // Zavrti se na mestu
-        
+      if(!doOnce){
+        TurnAround();
+        delayCount = 0;
+        doOnce = true;
+      }
+      if(CheckIfDelayEnded(200)){
+        step++;
+        doOnce = false;
+      }
       break;
     case 6: // Sledi črti nazajn
    
@@ -80,7 +91,15 @@ void HandleSteps(){
       
       break;
     case 9: // Zavrti na mestu, če je avtomatski način potem se cikelj ponovi
-      
+      if(!doOnce){
+        TurnAround();
+        delayCount = 0;
+        doOnce = true;
+      }
+      if(CheckIfDelayEnded(200)){
+        step++;
+        doOnce = false;
+      }
       break;
   }
 
@@ -109,6 +128,10 @@ void TurnAround(){
 
 void CheckIfForksHeightsMatch(){
   return (forksActualHeight == forksHeight);
+}
+
+void CheckIfDelayEnded(int delayTime){
+  return (delayCount >= delayTime);
 }
 
 void CalculateMotorPower(){
