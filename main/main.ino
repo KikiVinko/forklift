@@ -7,14 +7,15 @@
 #define BLYNK_AUTH_TOKEN "mnDixmG0-dJPkC-IFD3MAmM6z3FUGHs5"
 #define BLYNK_PRINT Serial
 
-
 BlynkTimer timer1;
+BlynkTimer timer2;
 
 char ssid[] = "KiKi";
 char pass[] = "kikikiki";
 char auth[] = "mnDixmG0-dJPkC-IFD3MAmM6z3FUGHs5";
 
 int forksHeight;
+int forksActualHeight;
 int xAxis;
 int yAxis;
 int LMPI;
@@ -22,20 +23,25 @@ int DMPI;
 int motorPinL = D5;
 int motorPinD = D6;
 int step;
+int frontDistance;
 
 bool autoMode;
+bool debug;
+bool lIrSensor;
+bool dIrSensor;
 
 WidgetTerminal OutputTerminal(V3);
 
 void setup() {
   timer1.setInterval(10000L, BatteryIndicator);
-
+  timer2.setInterval(1000L, Debug);
 }
 
 void loop() {
   Blynk.run();
   CalculateMotorPower();
   HandleSteps();
+  HandleForks(forksHeight);
 }
 
 void HandleSteps(){
@@ -45,33 +51,64 @@ void HandleSteps(){
 
       break;
     case 1: // Začetek sledenja črti
-      handleDriving();
+      
       break;
     case 2: // Približaj paleti
-      handleApproach(true);
+      
     case 3: // Dvigni paleto
-      handleForks(true);
+      forksHeight = 160;
+      if(CheckIfForksHeightsMatch()){
+        step++;
+      }
       break;
     case 4: // Odmakni se (malo vzratno, da je dovol prostora za zasuk)
-      handleApproach(false);
+   
       break;
     case 5: // Zavrti se na mestu
-        handleRotation(true);
+        
       break;
     case 6: // Sledi črti nazajn
-      handleDriving();
+   
       break;
     case 7: // Spusti paleto
-      handleForks(false);
+      forksHeight = 0;
+      if(CheckIfForksHeightsMatch()){
+        step++;
+      }
       break;
     case 8: // Odmakni se od palete (malo vzratno, da je dovol prostora za zasuk)
-      handleApproach(false);
+      
       break;
     case 9: // Zavrti na mestu, če je avtomatski način potem se cikelj ponovi
-      handleRotation(false);
+      
       break;
   }
 
+}
+
+void FollowTrail(){
+
+}
+
+void HandleApproach(bool approach){
+  if(approach){
+
+  }
+  else{
+
+  }
+}
+
+void HandleForks(int height){
+  
+}
+
+void TurnAround(){
+
+}
+
+void CheckIfForksHeightsMatch(){
+  return (forksActualHeight == forksHeight);
 }
 
 void CalculateMotorPower(){
@@ -83,8 +120,12 @@ void CalculateMotorPower(){
     LMPI = yAxis;
     DMPI = -xAxis + yAxis;
   }
-  analogWrite(motorPinL,LMPI);
-  analogWrite(motorPinD,DMPI);
+  WriteToMotors(LMPI, DMPI);
+}
+
+void WriteToMotors(int LMP, int DMP){
+  analogWrite(motorPinL,LMP);
+  analogWrite(motorPinD,DMP);
 }
 
 void BatteryIndicator(){ // Prikaz Led barve glede na napetost, tu ne rabiš nič dodat, izvede se vsakih 10s.
@@ -96,9 +137,45 @@ void BatteryIndicator(){ // Prikaz Led barve glede na napetost, tu ne rabiš ni�
   else if (vIn < 11.3) Blynk.setProperty(V0, "color", "#360f0f");
 }
 
+void Debug(){ // To je za debug v Blynk terminal, lahko dodaš kako spremenljivko,
+  if(debug){
+    OutputTerminal.clear();
+
+    OutputTerminal.println(
+      "Xaxis: "+ String(Xaxis) + 
+      " Yaxis: "+ String(Yaxis) +
+      " autoMode: "+ String(autoMode)
+    );
+
+    OutputTerminal.println(
+      " lIrSensor: "+ String(lIrSensor) + 
+      " dIrSensor: "+ String(dIrSensor) +
+      " frontDistance: "+ String(frontDistance)
+    );
+
+  }
+}
+
 BLYNK_WRITE(V1){ // Mode, 0-ročni način, 1-avtomatski način
   autoMode = param[0].asInt();
 } 
+
+BLYNK_WRITE(V3){ //TERMINAL, tu ne diraj nič, razen če hočeš kaj dodati
+  if(String("/ping") == param.asStr()){
+    OutputTerminal.println("Forklift ping");
+  }
+  else if(String("/c") == param.asStr()){
+    OutputTerminal.clear();
+  }
+  else if(String("/status") == param.asStr()){
+    OutputTerminal.println(status);
+  }
+  else if(String("/debug") == param.asStr()){
+    isDebug = !isDebug;
+    OutputTerminal.println("Debug: "+ String(isDebug));
+  }
+  OutputTerminal.flush();
+}
 
 BLYNK_WRITE(V5){ //Tu dobiš vrednost slidera za handleForks. To vrednost je potem treba spremenit v rotacijo motorja.
   if(!autoMode){
